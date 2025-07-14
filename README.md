@@ -70,8 +70,8 @@ Redis (Key-Value Store)
 
 ```bash
 # 저장소 복제
-git clone https://github.com/your-org/ml-pipeline-local-db.git
-cd ml-pipeline-local-db
+git clone https://github.com/your-org/mmp-local-dev.git
+cd mmp-local-dev
 
 # 원스톱 설치 (모든 의존성 자동 설치)
 ./setup.sh
@@ -442,7 +442,7 @@ your-workspace/
 │   │   └── prod.yaml
 │   ├── recipes/
 │   └── src/
-└── ml-pipeline-local-db/        # 독립적인 DEV 환경 (이 저장소)
+└── mmp-local-dev/        # 독립적인 DEV 환경 (이 저장소)
     ├── docker-compose.yml
     ├── setup.sh
     └── README.md

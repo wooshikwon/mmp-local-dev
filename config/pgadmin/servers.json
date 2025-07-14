@@ -1,7 +1,7 @@
 {
     "Servers": {
         "1": {
-            "Name": "ML Pipeline Local DB",
+            "Name": "MMP Local Dev",
             "Group": "Local Development",
             "Host": "postgres",
             "Port": 5432,

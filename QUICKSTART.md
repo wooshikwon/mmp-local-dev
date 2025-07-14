@@ -6,8 +6,8 @@
 
 ```bash
 # 1. 저장소 복제
-git clone https://github.com/your-org/ml-pipeline-local-db.git
-cd ml-pipeline-local-db
+git clone https://github.com/your-org/mmp-local-dev.git
+cd mmp-local-dev
 
 # 2. 원스톱 자동 설치 (모든 의존성 자동 설치)
 ./setup.sh
@@ -81,7 +81,7 @@ APP_ENV=dev python main.py serve-api --run-id <run_id>
 
 ```bash
 # 서비스 상태 확인
-cd ../ml-pipeline-local-db
+cd ../mmp-local-dev
 ./setup.sh --status
 
 # 로그 확인
@@ -104,7 +104,7 @@ Blueprint v17.0의 "완전한 실험실" DEV 환경이 준비되었습니다. �
 
 ### 1. **Git Submodule 방식** (⭐ 가장 세련된 표준 방법)
 
-메인 프로젝트에서 ml-pipeline-local-db를 submodule로 관리하는 방법입니다.
+메인 프로젝트에서 mmp-local-dev를 submodule로 관리하는 방법입니다.
 
 ```bash
 <code_block_to_apply_changes_from>
@@ -130,8 +130,8 @@ git submodule update --init --recursive
 ### 2. **원스톱 개발환경 스크립트** (⭐ 사용자 편의성 최고)
 
 ```bash
-# ml-pipeline-local-db를 별도 GitHub repo로 생성 후
+# mmp-local-dev를 별도 GitHub repo로 생성 후
 cd modern-ml-pipeline
-git submodule add https://github.com/your-org/ml-pipeline-local-db.git dev-environment
+git submodule add https://github.com/your-org/mmp-local-dev.git dev-environment
 git commit -m "Add dev environment as submodule"
 ``` 

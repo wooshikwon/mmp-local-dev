@@ -7,7 +7,7 @@ services:
   # PostgreSQL - Data Warehouse + Feast Offline Store + MLflow Backend
   postgres:
     image: postgres:15-alpine
-    container_name: ml-pipeline-postgres
+    container_name: mmp-postgres
     environment:
       POSTGRES_DB: mlpipeline
       POSTGRES_USER: mluser
@@ -31,7 +31,7 @@ services:
   # Redis - Feast Online Store + Caching
   redis:
     image: redis:7-alpine
-    container_name: ml-pipeline-redis
+    container_name: mmp-redis
     ports:
       - "6379:6379"
     volumes:
@@ -50,7 +50,7 @@ services:
   # MLflow Server - 팀 공유 실험 추적 및 모델 관리
   mlflow:
     image: python:3.11-slim
-    container_name: ml-pipeline-mlflow
+    container_name: mmp-mlflow
     working_dir: /opt/mlflow
     environment:
       - MLFLOW_BACKEND_STORE_URI=postgresql://mluser:mlpassword@postgres:5432/mlpipeline
@@ -88,7 +88,7 @@ services:
   # pgAdmin (PostgreSQL 관리 UI)
   pgadmin:
     image: dpage/pgadmin4:latest
-    container_name: ml-pipeline-pgadmin
+    container_name: mmp-pgadmin
     environment:
       - PGADMIN_DEFAULT_EMAIL=admin@mlpipeline.local
       - PGADMIN_DEFAULT_PASSWORD=admin
@@ -108,7 +108,7 @@ services:
   # Redis Commander (Redis 관리 UI)
   redis-commander:
     image: rediscommander/redis-commander:latest
-    container_name: ml-pipeline-redis-commander
+    container_name: mmp-redis-commander
     environment:
       - REDIS_HOSTS=local:redis:6379
       - HTTP_USER=admin
@@ -131,11 +131,11 @@ volumes:
     driver: local
   mlflow_artifacts:
     driver: local
-    name: ml-pipeline-mlflow-artifacts
+    name: mmp-mlflow-artifacts
 
 # 네트워크 정의
 networks:
   ml-db-network:
     driver: bridge
-    name: ml-pipeline-db-network
+    name: mmp-db-network
     external: false 

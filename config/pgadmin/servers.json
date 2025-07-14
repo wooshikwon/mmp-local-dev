@@ -1,0 +1,14 @@
+{
+    "Servers": {
+        "1": {
+            "Name": "ML Pipeline Local DB",
+            "Group": "Local Development",
+            "Host": "postgres",
+            "Port": 5432,
+            "MaintenanceDB": "mlpipeline",
+            "Username": "mluser",
+            "PassFile": "/tmp/pgpassfile",
+            "SSLMode": "prefer"
+        }
+    }
+} 

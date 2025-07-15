@@ -1,141 +1,110 @@
-# 🏗️ ML Pipeline Local Database Environment
-# 프로젝트 외부에서 독립적으로 실행되는 테스트용 DB 스택
-
 version: '3.8'
 
 services:
-  # PostgreSQL - Data Warehouse + Feast Offline Store + MLflow Backend
-  postgres:
-    image: postgres:15-alpine
-    container_name: mmp-postgres
+  postgresql:
+    image: postgres:15
+    container_name: ml-pipeline-postgres
     environment:
-      POSTGRES_DB: mlpipeline
-      POSTGRES_USER: mluser
-      POSTGRES_PASSWORD: mlpassword
-      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --locale=C"
+      POSTGRES_DB: ${POSTGRES_DB:-mlpipeline}
+      POSTGRES_USER: ${POSTGRES_USER:-mluser}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./sql/init:/docker-entrypoint-initdb.d
-      - ./sql/schemas:/opt/schemas
-    networks:
-      - ml-db-network
+      - ./scripts/init-database.sql:/docker-entrypoint-initdb.d/01-init.sql
+      - ./scripts/seed-features.sql:/docker-entrypoint-initdb.d/02-seed.sql
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U mluser -d mlpipeline"]
-      interval: 30s
-      timeout: 10s
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mluser} -d ${POSTGRES_DB:-mlpipeline}"]
+      interval: 10s
+      timeout: 5s
       retries: 5
     restart: unless-stopped
 
-  # Redis - Feast Online Store + Caching
   redis:
     image: redis:7-alpine
-    container_name: mmp-redis
+    container_name: ml-pipeline-redis
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
-      - ./config/redis.conf:/etc/redis/redis.conf:ro
-    command: redis-server /etc/redis/redis.conf --appendonly yes
-    networks:
-      - ml-db-network
+    command: redis-server --appendonly yes
     healthcheck:
-      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
-      interval: 30s
-      timeout: 10s
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
       retries: 5
     restart: unless-stopped
 
-  # MLflow Server - 팀 공유 실험 추적 및 모델 관리
   mlflow:
     image: python:3.11-slim
-    container_name: mmp-mlflow
-    working_dir: /opt/mlflow
-    environment:
-      - MLFLOW_BACKEND_STORE_URI=postgresql://mluser:mlpassword@postgres:5432/mlpipeline
-      - MLFLOW_DEFAULT_ARTIFACT_ROOT=/opt/mlflow/artifacts
-      - MLFLOW_HOST=0.0.0.0
-      - MLFLOW_PORT=5000
+    container_name: ml-pipeline-mlflow
     ports:
       - "5000:5000"
-    volumes:
-      - mlflow_artifacts:/opt/mlflow/artifacts
-      - ./config/mlflow:/opt/mlflow/config
     depends_on:
-      postgres:
+      postgresql:
         condition: service_healthy
-    networks:
-      - ml-db-network
+    environment:
+      - MLFLOW_BACKEND_STORE_URI=postgresql://${POSTGRES_USER:-mluser}:${POSTGRES_PASSWORD}@postgresql:5432/${POSTGRES_DB:-mlpipeline}
+      - MLFLOW_DEFAULT_ARTIFACT_ROOT=/mlflow/artifacts
+    volumes:
+      - mlflow_artifacts:/mlflow/artifacts
     command: >
-      bash -c "
-        pip install mlflow[extras]==2.10.2 psycopg2-binary &&
+      sh -c "
+        pip install --no-cache-dir mlflow psycopg2-binary &&
         mlflow server 
-          --backend-store-uri postgresql://mluser:mlpassword@postgres:5432/mlpipeline
-          --default-artifact-root /opt/mlflow/artifacts
+          --backend-store-uri postgresql://${POSTGRES_USER:-mluser}:${POSTGRES_PASSWORD}@postgresql:5432/${POSTGRES_DB:-mlpipeline}
+          --default-artifact-root /mlflow/artifacts
           --host 0.0.0.0
           --port 5000
-          --serve-artifacts
       "
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
       interval: 30s
       timeout: 10s
       retries: 5
-      start_period: 60s
     restart: unless-stopped
 
-  # pgAdmin (PostgreSQL 관리 UI)
-  pgadmin:
-    image: dpage/pgadmin4:latest
-    container_name: mmp-pgadmin
+  feast-setup:
+    image: python:3.11-slim
+    container_name: ml-pipeline-feast-setup
+    depends_on:
+      postgresql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
-      - PGADMIN_DEFAULT_EMAIL=admin@mlpipeline.local
-      - PGADMIN_DEFAULT_PASSWORD=admin
-      - PGADMIN_CONFIG_SERVER_MODE=False
-      - PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED=False
-    ports:
-      - "8082:80"
+      - POSTGRES_HOST=postgresql
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=${POSTGRES_DB:-mlpipeline}
+      - POSTGRES_USER=${POSTGRES_USER:-mluser}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     volumes:
-      - pgadmin_data:/var/lib/pgadmin
-      - ./config/pgadmin/servers.json:/pgadmin4/servers.json:ro
-    depends_on:
-      - postgres
-    networks:
-      - ml-db-network
-    restart: unless-stopped
+      - ./feast:/feast
+      - feast_registry:/feast/data
+    working_dir: /feast
+    command: >
+      sh -c "
+        pip install --no-cache-dir 'feast[postgres,redis]' &&
+        echo 'Waiting for services to be ready...' &&
+        sleep 30 &&
+        feast apply &&
+        echo 'Feature store setup completed successfully!'
+      "
+    restart: "no"
 
-  # Redis Commander (Redis 관리 UI)
-  redis-commander:
-    image: rediscommander/redis-commander:latest
-    container_name: mmp-redis-commander
-    environment:
-      - REDIS_HOSTS=local:redis:6379
-      - HTTP_USER=admin
-      - HTTP_PASSWORD=admin
-    ports:
-      - "8081:8081"
-    depends_on:
-      - redis
-    networks:
-      - ml-db-network
-    restart: unless-stopped
-
-# 볼륨 정의
 volumes:
   postgres_data:
     driver: local
   redis_data:
     driver: local
-  pgadmin_data:
-    driver: local
   mlflow_artifacts:
     driver: local
-    name: mmp-mlflow-artifacts
+  feast_registry:
+    driver: local
 
-# 네트워크 정의
 networks:
-  ml-db-network:
-    driver: bridge
-    name: mmp-db-network
-    external: false 
+  default:
+    name: ml-pipeline-network 

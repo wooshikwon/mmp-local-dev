@@ -1,0 +1,26 @@
+project: ml_pipeline_local
+registry: data/registry.db
+provider: local
+
+# Offline store configuration (PostgreSQL)
+offline_store:
+  type: postgres
+  host: postgresql
+  port: 5432
+  database: mlpipeline
+  db_schema: features
+  user: mluser
+  password: ${POSTGRES_PASSWORD}
+
+# Online store configuration (Redis)
+online_store:
+  type: redis
+  connection_string: "redis://redis:6379"
+
+# Entity key serialization
+entity_key_serialization_version: 2
+
+# Flags
+flags:
+  alpha_features: true
+  beta_features: false 

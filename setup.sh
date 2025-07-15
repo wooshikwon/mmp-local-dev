@@ -1,9 +1,7 @@
 #!/bin/bash
 
-# 🏗️ ML Pipeline Local Database Environment Setup
-# Blueprint v17.0: "완전한 실험실" 철학 구현
-# PostgreSQL + Redis + MLflow + Feast 완전 자동화 설치
-# 완전히 새로운 컴퓨터에서도 원스톱 설치 지원
+# 🚀 MMP Local Dev Environment - One-Stop Setup
+# Blueprint v17.0: 완전한 개발 환경 자동 구성
 
 set -e
 
@@ -13,13 +11,7 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 PURPLE='\033[0;35m'
-CYAN='\033[0;36m'
 NC='\033[0m'
-
-# 글로벌 변수
-PYTHON_MIN_VERSION="3.11"
-DOCKER_MIN_VERSION="20.0"
-COMPOSE_MIN_VERSION="2.0"
 
 log_info() {
     echo -e "${BLUE}[INFO]${NC} $1"
@@ -41,675 +33,305 @@ log_step() {
     echo -e "${PURPLE}[STEP]${NC} $1"
 }
 
-log_install() {
-    echo -e "${CYAN}[INSTALL]${NC} $1"
-}
-
 print_banner() {
     echo -e "${BLUE}"
     echo "=================================================================="
-    echo "🏗️ Blueprint v17.0 DEV Environment Setup"
-    echo "\"완전한 실험실\" 철학 구현"
-    echo "Zero Setup: 완전히 새로운 컴퓨터에서도 원스톱 설치"
-    echo "PostgreSQL + Redis + MLflow + Feast"
+    echo "🚀 MMP Local Dev Environment - One-Stop Setup"
+    echo "Blueprint v17.0: PostgreSQL + Redis + MLflow + Feature Store"
     echo "=================================================================="
     echo -e "${NC}"
 }
 
-# 운영체제 감지
-detect_os() {
-    if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-        if [ -f /etc/debian_version ]; then
-            OS="debian"
-            DISTRO=$(lsb_release -si 2>/dev/null || echo "Unknown")
-        elif [ -f /etc/redhat-release ]; then
-            OS="redhat"
-            DISTRO=$(cat /etc/redhat-release | awk '{print $1}')
-        else
-            OS="linux"
-            DISTRO="Unknown"
-        fi
-    elif [[ "$OSTYPE" == "darwin"* ]]; then
-        OS="macos"
-        DISTRO="macOS"
-    elif [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "cygwin" ]]; then
-        OS="windows"
-        DISTRO="Windows"
-    else
-        OS="unknown"
-        DISTRO="Unknown"
-    fi
+check_dependencies() {
+    log_step "의존성 확인 중..."
     
-    log_info "감지된 운영체제: $DISTRO ($OS)"
-}
-
-# 버전 비교 함수
-version_compare() {
-    local version1=$1
-    local version2=$2
-    printf '%s\n%s\n' "$version1" "$version2" | sort -V | head -n1
-}
-
-# Docker 설치 확인 및 설치
-install_docker() {
-    log_step "Docker 설치 확인 중..."
-    
-    if command -v docker &> /dev/null; then
-        local docker_version=$(docker --version | grep -oE '[0-9]+\.[0-9]+' | head -1)
-        local min_version_check=$(version_compare "$docker_version" "$DOCKER_MIN_VERSION")
-        
-        if [ "$min_version_check" = "$DOCKER_MIN_VERSION" ]; then
-            log_success "Docker $docker_version 이미 설치됨"
-        else
-            log_warn "Docker 버전이 너무 낮습니다 ($docker_version < $DOCKER_MIN_VERSION)"
-            install_docker_package
-        fi
-    else
-        log_install "Docker 설치 중..."
-        install_docker_package
-    fi
-    
-    # Docker 서비스 확인
-    if ! docker info &> /dev/null; then
-        log_warn "Docker 서비스가 실행되고 있지 않습니다."
-        start_docker_service
-    fi
-}
-
-install_docker_package() {
-    case $OS in
-        "macos")
-            if command -v brew &> /dev/null; then
-                log_install "Homebrew로 Docker 설치 중..."
-                brew install --cask docker
-                log_info "Docker Desktop을 수동으로 시작하세요"
-                open /Applications/Docker.app
-                log_info "Docker Desktop이 시작될 때까지 30초 대기..."
-                sleep 30
-            else
-                log_error "Homebrew가 설치되어 있지 않습니다."
-                log_info "Docker Desktop을 수동으로 설치하세요: https://docs.docker.com/desktop/install/mac-install/"
-                exit 1
-            fi
-            ;;
-        "debian")
-            log_install "APT로 Docker 설치 중..."
-            sudo apt update
-            sudo apt install -y apt-transport-https ca-certificates curl gnupg lsb-release
-            curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-            echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-            sudo apt update
-            sudo apt install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
-            sudo usermod -aG docker $USER
-            log_warn "Docker 그룹 변경이 적용되도록 터미널을 재시작하거나 'newgrp docker'를 실행하세요"
-            ;;
-        "redhat")
-            log_install "YUM/DNF로 Docker 설치 중..."
-            if command -v dnf &> /dev/null; then
-                sudo dnf install -y yum-utils
-                sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
-                sudo dnf install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
-            else
-                sudo yum install -y yum-utils
-                sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
-                sudo yum install -y docker-ce docker-ce-cli containerd.io docker-compose-plugin
-            fi
-            sudo usermod -aG docker $USER
-            sudo systemctl enable docker
-            sudo systemctl start docker
-            ;;
-        *)
-            log_error "지원하지 않는 운영체제입니다: $OS"
-            log_info "Docker를 수동으로 설치하세요: https://docs.docker.com/get-docker/"
-            exit 1
-            ;;
-    esac
-}
-
-start_docker_service() {
-    case $OS in
-        "macos")
-            log_info "Docker Desktop을 시작해주세요"
-            if [ -d "/Applications/Docker.app" ]; then
-                open /Applications/Docker.app
-                log_info "Docker Desktop 시작 대기 중..."
-                local retries=60
-                while [ $retries -gt 0 ]; do
-                    if docker info &> /dev/null; then
-                        log_success "Docker Desktop 시작됨"
-                        break
-                    fi
-                    sleep 5
-                    retries=$((retries-5))
-                done
-            fi
-            ;;
-        "debian"|"redhat")
-            log_install "Docker 서비스 시작 중..."
-            sudo systemctl enable docker
-            sudo systemctl start docker
-            ;;
-    esac
-}
-
-# Docker Compose 설치 확인
-install_docker_compose() {
-    log_step "Docker Compose 설치 확인 중..."
-    
-    # Docker Compose V2 (플러그인) 확인
-    if docker compose version &> /dev/null; then
-        local compose_version=$(docker compose version | grep -oE '[0-9]+\.[0-9]+' | head -1)
-        log_success "Docker Compose (Plugin) $compose_version 이미 설치됨"
-        return
-    fi
-    
-    # Docker Compose V1 확인
-    if command -v docker-compose &> /dev/null; then
-        local compose_version=$(docker-compose --version | grep -oE '[0-9]+\.[0-9]+' | head -1)
-        local min_version_check=$(version_compare "$compose_version" "$COMPOSE_MIN_VERSION")
-        
-        if [ "$min_version_check" = "$COMPOSE_MIN_VERSION" ]; then
-            log_success "Docker Compose $compose_version 이미 설치됨"
-            return
-        fi
-    fi
-    
-    log_install "Docker Compose 설치 중..."
-    case $OS in
-        "macos")
-            # Docker Desktop에 이미 포함됨
-            log_info "Docker Desktop에 Docker Compose가 포함되어 있습니다"
-            ;;
-        "debian")
-            sudo apt install -y docker-compose-plugin
-            ;;
-        "redhat")
-            sudo yum install -y docker-compose-plugin
-            ;;
-        *)
-            # Standalone 바이너리 설치
-            local latest_version=$(curl -s https://api.github.com/repos/docker/compose/releases/latest | grep -Po '"tag_name": "\K.*?(?=")')
-            sudo curl -L "https://github.com/docker/compose/releases/download/${latest_version}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-            sudo chmod +x /usr/local/bin/docker-compose
-            ;;
-    esac
-}
-
-# Python 설치 확인 및 설치
-install_python() {
-    log_step "Python 설치 확인 중..."
-    
-    local python_cmd=""
-    for cmd in python3 python; do
-        if command -v $cmd &> /dev/null; then
-            local python_version=$($cmd --version 2>&1 | grep -oE '[0-9]+\.[0-9]+')
-            local min_version_check=$(version_compare "$python_version" "$PYTHON_MIN_VERSION")
-            
-            if [ "$min_version_check" = "$PYTHON_MIN_VERSION" ]; then
-                python_cmd=$cmd
-                log_success "Python $python_version 이미 설치됨 ($cmd)"
-                break
-            fi
-        fi
-    done
-    
-    if [ -z "$python_cmd" ]; then
-        log_install "Python $PYTHON_MIN_VERSION+ 설치 중..."
-        install_python_package
-        
-        # 재확인
-        for cmd in python3 python; do
-            if command -v $cmd &> /dev/null; then
-                local python_version=$($cmd --version 2>&1 | grep -oE '[0-9]+\.[0-9]+')
-                local min_version_check=$(version_compare "$python_version" "$PYTHON_MIN_VERSION")
-                
-                if [ "$min_version_check" = "$PYTHON_MIN_VERSION" ]; then
-                    python_cmd=$cmd
-                    break
-                fi
-            fi
-        done
-    fi
-    
-    if [ -z "$python_cmd" ]; then
-        log_error "Python $PYTHON_MIN_VERSION+를 설치할 수 없습니다"
+    # Docker 확인
+    if ! command -v docker &> /dev/null; then
+        log_error "Docker가 설치되지 않았습니다!"
+        log_info "Docker Desktop 또는 OrbStack을 설치하세요:"
+        log_info "- Docker Desktop: https://docs.docker.com/desktop/install/mac-install/"
+        log_info "- OrbStack: https://orbstack.dev/ (추천)"
         exit 1
     fi
     
-    # 전역 Python 명령어 설정
-    export PYTHON_CMD=$python_cmd
-}
-
-install_python_package() {
-    case $OS in
-        "macos")
-            if command -v brew &> /dev/null; then
-                log_install "Homebrew로 Python 설치 중..."
-                brew install python@3.11
-            else
-                log_error "Homebrew가 설치되어 있지 않습니다."
-                log_info "Python을 수동으로 설치하세요: https://www.python.org/downloads/"
-                exit 1
-            fi
-            ;;
-        "debian")
-            log_install "APT로 Python 설치 중..."
-            sudo apt update
-            sudo apt install -y python3.11 python3.11-pip python3.11-venv python3-pip
-            ;;
-        "redhat")
-            log_install "YUM/DNF로 Python 설치 중..."
-            if command -v dnf &> /dev/null; then
-                sudo dnf install -y python3.11 python3-pip
-            else
-                sudo yum install -y python3.11 python3-pip
-            fi
-            ;;
-        *)
-            log_error "지원하지 않는 운영체제입니다: $OS"
-            log_info "Python을 수동으로 설치하세요: https://www.python.org/downloads/"
-            exit 1
-            ;;
-    esac
-}
-
-# Python 패키지 설치
-install_python_packages() {
-    log_step "Python 패키지 설치 중..."
-    
-    # pip 업그레이드
-    log_install "pip 업그레이드 중..."
-    $PYTHON_CMD -m pip install --upgrade pip
-    
-    # 필수 패키지 설치
-    log_install "필수 패키지 설치 중..."
-    local packages=(
-        "feast[redis,postgres]>=0.32.0"
-        "mlflow>=2.10.0"
-        "psycopg2-binary"
-        "redis"
-        "requests"
-        "pyyaml"
-    )
-    
-    for package in "${packages[@]}"; do
-        log_info "설치 중: $package"
-        $PYTHON_CMD -m pip install "$package" || log_warn "$package 설치 실패 - 계속 진행"
-    done
-    
-    log_success "Python 패키지 설치 완료"
-}
-
-# 필요한 디렉토리 생성
-create_directories() {
-    log_step "디렉토리 구조 생성 중..."
-    
-    mkdir -p config/mlflow
-    mkdir -p config/pgadmin  
-    mkdir -p sql/{init,schemas}
-    
-    # Blueprint v17.0 호환성: feast 디렉토리 제거
-    if [ -d "feast" ]; then
-        log_warn "Blueprint v17.0 호환성: 기존 feast 디렉토리 제거 중..."
-        rm -rf feast
+    # Docker Compose 확인
+    if ! command -v docker-compose &> /dev/null; then
+        log_error "Docker Compose가 설치되지 않았습니다!"
+        exit 1
     fi
     
-    log_success "디렉토리 구조가 생성되었습니다."
-}
-
-# 기존 환경 정리
-cleanup_existing() {
-    log_step "기존 환경 정리 중..."
-    
-    # Docker Compose 명령어 감지
-    local compose_cmd="docker compose"
-    if command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null; then
-        compose_cmd="docker-compose"
+    # Docker 데몬 확인
+    if ! docker info &> /dev/null; then
+        log_error "Docker 데몬이 실행되지 않았습니다!"
+        log_info "Docker Desktop 또는 OrbStack을 실행하세요"
+        exit 1
     fi
     
-    # 컨테이너 중지 및 제거
-    $compose_cmd down -v 2>/dev/null || true
-    
-    # 네트워크 정리
-    docker network rm ml-pipeline-db-network 2>/dev/null || true
-    
-    # 고아 컨테이너 정리
-    docker container prune -f 2>/dev/null || true
-    
-    log_success "기존 환경이 정리되었습니다."
+    log_success "모든 의존성 확인 완료"
 }
 
-# DB 서비스 시작
+setup_environment() {
+    log_step "환경 설정 중..."
+    
+    # 환경 변수 파일 생성
+    if [ ! -f ".env" ]; then
+        log_info ".env 파일 생성 중..."
+        cat > .env << EOF
+# PostgreSQL 설정
+POSTGRES_DB=mlpipeline
+POSTGRES_USER=mluser
+POSTGRES_PASSWORD=mlpassword
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+
+# Redis 설정
+REDIS_HOST=localhost
+REDIS_PORT=6379
+
+# MLflow 설정
+MLFLOW_TRACKING_URI=http://localhost:5000
+MLFLOW_S3_ENDPOINT_URL=http://localhost:9000
+
+# Feature Store 설정
+FEATURE_STORE_OFFLINE_URI=postgresql://mluser:mlpassword@localhost:5432/mlpipeline
+FEATURE_STORE_ONLINE_URI=redis://localhost:6379
+EOF
+        log_success ".env 파일 생성 완료"
+    fi
+}
+
 start_services() {
-    log_step "데이터베이스 서비스 시작 중..."
+    log_step "서비스 시작 중..."
     
-    # Docker Compose 명령어 감지
-    local compose_cmd="docker compose"
-    if command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null; then
-        compose_cmd="docker-compose"
-    fi
-    
-    log_info "사용하는 Docker Compose: $compose_cmd"
+    # 기존 컨테이너 정리
+    docker-compose down -v 2>/dev/null || true
     
     # 서비스 시작
-    $compose_cmd up -d
+    log_info "PostgreSQL + Redis 시작 중..."
+    docker-compose up -d
     
-    log_success "데이터베이스 서비스가 시작되었습니다."
-}
-
-# 서비스 상태 확인
-check_services() {
-    log_step "서비스 상태 확인 중..."
+    # 서비스 health check
+    log_info "서비스 준비 상태 확인 중..."
     
-    # Docker Compose 명령어 감지
-    local compose_cmd="docker compose"
-    if command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null; then
-        compose_cmd="docker-compose"
-    fi
-    
-    # PostgreSQL 연결 확인
-    log_info "PostgreSQL 연결 확인 중..."
-    local retries=60
-    while [ $retries -gt 0 ]; do
-        if $compose_cmd exec -T postgres pg_isready -U mluser -d mlpipeline >/dev/null 2>&1; then
-            log_success "PostgreSQL 연결 성공"
+    # PostgreSQL 대기
+    log_info "PostgreSQL 준비 대기 중..."
+    timeout=60
+    count=0
+    while [ $count -lt $timeout ]; do
+        if docker-compose exec -T postgres pg_isready -U mluser -d mlpipeline &>/dev/null; then
+            log_success "PostgreSQL 준비 완료"
             break
         fi
-        log_info "PostgreSQL 연결 대기 중... ($retries초 남음)"
-        retries=$((retries-1))
-        sleep 2
+        sleep 1
+        count=$((count + 1))
     done
     
-    if [ $retries -eq 0 ]; then
-        log_error "PostgreSQL 연결 실패"
-        $compose_cmd logs postgres
+    if [ $count -eq $timeout ]; then
+        log_error "PostgreSQL 시작 타임아웃"
         exit 1
     fi
     
-    # Redis 연결 확인
-    log_info "Redis 연결 확인 중..."
-    retries=30
-    while [ $retries -gt 0 ]; do
-        if $compose_cmd exec -T redis redis-cli ping >/dev/null 2>&1; then
-            log_success "Redis 연결 성공"
+    # Redis 대기
+    log_info "Redis 준비 대기 중..."
+    count=0
+    while [ $count -lt $timeout ]; do
+        if docker-compose exec -T redis redis-cli ping &>/dev/null; then
+            log_success "Redis 준비 완료"
             break
         fi
-        log_info "Redis 연결 대기 중... ($retries초 남음)"
-        retries=$((retries-1))
-        sleep 2
+        sleep 1
+        count=$((count + 1))
     done
     
-    if [ $retries -eq 0 ]; then
-        log_error "Redis 연결 실패"
-        $compose_cmd logs redis
+    if [ $count -eq $timeout ]; then
+        log_error "Redis 시작 타임아웃"
         exit 1
     fi
     
-    # MLflow 서버 확인
-    log_info "MLflow 서버 확인 중..."
-    retries=90
-    while [ $retries -gt 0 ]; do
-        if curl -f http://localhost:5000/health >/dev/null 2>&1; then
-            log_success "MLflow 서버 연결 성공"
-            break
-        fi
-        log_info "MLflow 서버 시작 대기 중... ($retries초 남음)"
-        retries=$((retries-1))
-        sleep 2
-    done
-    
-    if [ $retries -eq 0 ]; then
-        log_warn "MLflow 서버 연결 실패 - 서비스 로그를 확인하세요"
-        log_info "로그 확인: $compose_cmd logs mlflow"
-    fi
+    log_success "모든 서비스 준비 완료"
 }
 
-# 환경 검증
-verify_environment() {
-    log_step "환경 검증 중..."
+initialize_database() {
+    log_step "데이터베이스 초기화 중..."
     
-    # 서비스 포트 확인
-    local services=(
-        "5432:PostgreSQL"
-        "6379:Redis" 
-        "5000:MLflow"
-        "8082:pgAdmin"
-        "8081:Redis Commander"
-    )
+    # Feature Store 스키마 생성
+    docker-compose exec -T postgres psql -U mluser -d mlpipeline << EOF
+-- Feature Store 스키마 생성
+CREATE SCHEMA IF NOT EXISTS feature_store;
+
+-- 샘플 피처 테이블 생성
+CREATE TABLE IF NOT EXISTS feature_store.user_demographics (
+    user_id VARCHAR(100) PRIMARY KEY,
+    age INTEGER,
+    gender VARCHAR(10),
+    education_level VARCHAR(50),
+    income_bracket VARCHAR(50),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS feature_store.user_behavior (
+    user_id VARCHAR(100) PRIMARY KEY,
+    click_through_rate DECIMAL(5,4),
+    session_frequency INTEGER,
+    avg_session_duration DECIMAL(10,2),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS feature_store.purchase_history (
+    user_id VARCHAR(100) PRIMARY KEY,
+    total_orders INTEGER,
+    avg_order_value DECIMAL(10,2),
+    preferred_category VARCHAR(50),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- 샘플 데이터 삽입
+INSERT INTO feature_store.user_demographics (user_id, age, gender, education_level, income_bracket) 
+VALUES 
+    ('test_user_123', 28, 'M', 'Bachelor', '50K-75K'),
+    ('test_user_456', 35, 'F', 'Master', '75K-100K'),
+    ('test_user_789', 42, 'M', 'PhD', '100K+')
+ON CONFLICT (user_id) DO NOTHING;
+
+INSERT INTO feature_store.user_behavior (user_id, click_through_rate, session_frequency, avg_session_duration)
+VALUES 
+    ('test_user_123', 0.0523, 12, 245.67),
+    ('test_user_456', 0.0789, 8, 189.34),
+    ('test_user_789', 0.0456, 15, 312.89)
+ON CONFLICT (user_id) DO NOTHING;
+
+INSERT INTO feature_store.purchase_history (user_id, total_orders, avg_order_value, preferred_category)
+VALUES 
+    ('test_user_123', 23, 87.50, 'Electronics'),
+    ('test_user_456', 15, 156.75, 'Fashion'),
+    ('test_user_789', 31, 203.25, 'Books')
+ON CONFLICT (user_id) DO NOTHING;
+EOF
     
-    for service in "${services[@]}"; do
-        local port=$(echo $service | cut -d: -f1)
-        local name=$(echo $service | cut -d: -f2)
-        
-        if netstat -tuln 2>/dev/null | grep -q ":$port " || lsof -i :$port >/dev/null 2>&1 || ss -tuln 2>/dev/null | grep -q ":$port "; then
-            log_success "$name ($port) 포트 활성"
-        else
-            log_warn "$name ($port) 포트 비활성 - 서비스 확인 필요"
-        fi
-    done
-    
-    # Python 패키지 확인
-    log_info "Python 패키지 확인 중..."
-    local required_packages=("feast" "mlflow" "psycopg2" "redis")
-    
-    for package in "${required_packages[@]}"; do
-        if $PYTHON_CMD -c "import $package" 2>/dev/null; then
-            log_success "Python 패키지 $package 설치됨"
-        else
-            log_warn "Python 패키지 $package 설치되지 않음"
-        fi
-    done
+    log_success "데이터베이스 초기화 완료"
 }
 
-# 추가 도구 설치 제안
-suggest_additional_tools() {
-    log_step "추가 도구 설치 제안..."
+setup_redis_features() {
+    log_step "Redis 피처 데이터 설정 중..."
     
-    local suggestions=()
+    # Redis에 샘플 피처 데이터 저장
+    docker-compose exec -T redis redis-cli << EOF
+SET "user_demographics:age:test_user_123" "28"
+SET "user_demographics:gender:test_user_123" "M"
+SET "user_demographics:education_level:test_user_123" "Bachelor"
+SET "user_demographics:income_bracket:test_user_123" "50K-75K"
+
+SET "user_behavior:click_through_rate:test_user_123" "0.0523"
+SET "user_behavior:session_frequency:test_user_123" "12"
+SET "user_behavior:avg_session_duration:test_user_123" "245.67"
+
+SET "purchase_history:total_orders:test_user_123" "23"
+SET "purchase_history:avg_order_value:test_user_123" "87.50"
+SET "purchase_history:preferred_category:test_user_123" "Electronics"
+EOF
     
-    # netstat 확인
-    if ! command -v netstat &> /dev/null && ! command -v ss &> /dev/null; then
-        suggestions+=("net-tools (netstat)")
-    fi
-    
-    # curl 확인
-    if ! command -v curl &> /dev/null; then
-        suggestions+=("curl")
-    fi
-    
-    # lsof 확인
-    if ! command -v lsof &> /dev/null; then
-        suggestions+=("lsof")
-    fi
-    
-    if [ ${#suggestions[@]} -gt 0 ]; then
-        log_info "추가 설치를 권장하는 도구들:"
-        for tool in "${suggestions[@]}"; do
-            echo "  - $tool"
-        done
-        
-        case $OS in
-            "debian")
-                log_info "설치 명령어: sudo apt install -y net-tools curl lsof"
-                ;;
-            "redhat")
-                log_info "설치 명령어: sudo yum install -y net-tools curl lsof"
-                ;;
-            "macos")
-                log_info "설치 명령어: brew install curl lsof"
-                ;;
-        esac
-    fi
+    log_success "Redis 피처 데이터 설정 완료"
 }
 
-# 환경 정보 출력
-print_environment_info() {
-    echo -e "${GREEN}"
-    echo "=================================================================="
-    echo "🎉 Blueprint v17.0 DEV 환경이 준비되었습니다!"
-    echo "\"완전한 실험실\" 철학 구현 완료"
+print_usage_guide() {
+    echo ""
+    echo -e "${GREEN}=================================================================="
+    echo "🎉 MMP Local Dev Environment 설정 완료!"
     echo "=================================================================="
     echo -e "${NC}"
     
     echo "📱 서비스 접속 정보:"
-    echo "   🗄️  PostgreSQL:         localhost:5432 (mluser/mlpassword/mlpipeline)"
+    echo "   🗄️  PostgreSQL:         localhost:5432"
     echo "   🔴 Redis:              localhost:6379"
-    echo "   📊 MLflow:             http://localhost:5000"
-    echo "   🐘 pgAdmin:            http://localhost:8082 (admin@mlpipeline.local/admin)"
-    echo "   🔧 Redis Commander:    http://localhost:8081 (admin/admin)"
+    echo "   📊 MLflow:             http://localhost:5000 (ML Pipeline 실행 후)"
     echo ""
     
-    echo "🔌 ML Pipeline 프로젝트 연결:"
-    echo "   # DEV 환경으로 학습 실행"
+    echo "🔗 연결 테스트:"
+    echo "   # PostgreSQL 연결"
+    echo "   docker-compose exec postgres psql -U mluser -d mlpipeline"
+    echo ""
+    echo "   # Redis 연결"
+    echo "   docker-compose exec redis redis-cli"
+    echo ""
+    
+    echo "🚀 다음 단계:"
+    echo "   # ML Pipeline 디렉토리로 이동"
     echo "   cd ../modern-ml-pipeline"
-    echo "   APP_ENV=dev python main.py train --recipe-file models/classification/random_forest_classifier"
     echo ""
-    echo "   # DEV 환경으로 API 서빙"  
-    echo "   APP_ENV=dev python main.py serve-api --run-id <run_id>"
+    echo "   # DEV 환경에서 학습 실행"
+    echo "   APP_ENV=dev uv run python main.py train --recipe-file dev_classification_test"
     echo ""
-    
-    echo "🏪 Feature Store 사용법 (Blueprint v17.0):"
-    echo "   # ML Pipeline 프로젝트의 config/dev.yaml에 이미 feast_config 포함됨"
-    echo "   # Recipe에서 피처 선언:"
-    echo "   augmenter:"
-    echo "     type: \"feature_store\""
-    echo "     features:"
-    echo "       - feature_namespace: \"user_demographics\""
-    echo "         features: [\"age\", \"country_code\"]"
-    echo "       - feature_namespace: \"product_details\""
-    echo "         features: [\"price\", \"category\"]"
+    echo "   # API 서빙 실행"
+    echo "   APP_ENV=dev uv run python main.py serve-api --run-id latest"
     echo ""
     
-    echo "🛠️ 관리 명령어:"
-    echo "   # 서비스 상태 확인"
-    echo "   ./setup.sh --status"
-    echo ""
-    echo "   # 로그 확인"
-    echo "   ./setup.sh --logs"
-    echo ""
-    echo "   # 서비스 재시작"
-    echo "   docker-compose restart  # 또는 docker compose restart"
-    echo ""
-    echo "   # 서비스 중지"
+    echo "🛠️ 환경 관리:"
+    echo "   # 환경 중지"
     echo "   docker-compose down"
     echo ""
-    echo "   # 완전 정리 (데이터 삭제)"
-    echo "   ./setup.sh --clean"
+    echo "   # 환경 완전 삭제"
+    echo "   docker-compose down -v"
     echo ""
+    echo "   # 환경 재시작"
+    echo "   ./setup.sh"
+    echo ""
+}
+
+# 상태 확인 함수
+check_status() {
+    echo -e "${BLUE}[STATUS]${NC} 서비스 상태 확인"
     
-    echo "🧪 환경 검증:"
-    echo "   ./setup.sh --status  # 전체 환경 상태 확인"
-    echo "   docker-compose ps    # 컨테이너 상태 확인"
-    echo "   curl http://localhost:5000/health  # MLflow 상태 확인"
-    echo ""
+    if docker-compose ps | grep -q "Up"; then
+        echo -e "${GREEN}✅ 서비스 실행 중${NC}"
+        docker-compose ps
+    else
+        echo -e "${RED}❌ 서비스가 실행되지 않음${NC}"
+        echo "다시 실행하려면: ./setup.sh"
+    fi
 }
 
 # 메인 실행
 main() {
     print_banner
-    detect_os
-    install_docker
-    install_docker_compose
-    install_python
-    install_python_packages
-    create_directories
-    cleanup_existing
+    check_dependencies
+    setup_environment
     start_services
-    check_services
-    verify_environment
-    suggest_additional_tools
-    print_environment_info
+    initialize_database
+    setup_redis_features
+    print_usage_guide
     
-    log_success "Blueprint v17.0 DEV 환경 설정이 완료되었습니다! 🎉"
-    log_info "이제 ML Pipeline에서 APP_ENV=dev로 모든 기능을 사용할 수 있습니다."
+    log_success "모든 설정이 완료되었습니다! 🚀"
 }
 
 # 옵션 처리
 case "${1:-}" in
-    --clean)
-        print_banner
-        log_info "환경 정리 중..."
-        
-        # Docker Compose 명령어 감지
-        local compose_cmd="docker compose"
-        if command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null; then
-            compose_cmd="docker-compose"
-        fi
-        
-        $compose_cmd down -v
-        docker system prune -f
-        docker volume prune -f
-        
-        log_success "환경 정리 완료"
-        exit 0
-        ;;
-    --logs)
-        # Docker Compose 명령어 감지
-        local compose_cmd="docker compose"
-        if command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null; then
-            compose_cmd="docker-compose"
-        fi
-        
-        $compose_cmd logs -f
-        exit 0
-        ;;
     --status)
-        print_banner
-        echo "서비스 상태:"
-        
-        # Docker Compose 명령어 감지
-        local compose_cmd="docker compose"
-        if command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null; then
-            compose_cmd="docker-compose"
-        fi
-        
-        $compose_cmd ps
-        echo ""
-        
-        detect_os
-        verify_environment
+        check_status
         exit 0
         ;;
-    --install-deps)
-        print_banner
-        log_info "의존성만 설치 중..."
-        detect_os
-        install_docker
-        install_docker_compose
-        install_python
-        install_python_packages
-        log_success "의존성 설치 완료"
+    --stop)
+        log_info "서비스 중지 중..."
+        docker-compose down
+        log_success "서비스 중지 완료"
+        exit 0
+        ;;
+    --clean)
+        log_info "서비스 완전 삭제 중..."
+        docker-compose down -v
+        log_success "서비스 완전 삭제 완료"
         exit 0
         ;;
     --help)
-        echo "Blueprint v17.0 DEV Environment Setup"
+        echo "MMP Local Dev Environment Setup"
         echo ""
         echo "사용법: $0 [옵션]"
         echo ""
         echo "옵션:"
-        echo "  (없음)           전체 환경 설치 및 시작"
-        echo "  --install-deps   의존성만 설치 (Docker, Python, 패키지)"
-        echo "  --clean          환경 완전 정리 (데이터 삭제)"
-        echo "  --logs           모든 서비스 로그 확인"
-        echo "  --status         서비스 상태 확인"
-        echo "  --help           도움말 표시"
-        echo ""
-        echo "Blueprint v17.0 \"완전한 실험실\" 철학:"
-        echo "  - PostgreSQL: Loader SQL + Feast Offline Store"
-        echo "  - Redis: Feast Online Store"
-        echo "  - MLflow: 팀 공유 실험 추적"
-        echo "  - Feast: Feature Store 프레임워크"
-        echo ""
-        echo "지원 운영체제:"
-        echo "  - macOS (Homebrew)"
-        echo "  - Ubuntu/Debian (APT)"
-        echo "  - RHEL/CentOS/Fedora (YUM/DNF)"
-        echo ""
-        echo "자동 설치 항목:"
-        echo "  - Docker & Docker Compose"
-        echo "  - Python 3.11+"
-        echo "  - Feast, MLflow, Redis, PostgreSQL 패키지"
-        echo ""
+        echo "  (없음)        전체 환경 설정 실행"
+        echo "  --status      현재 상태 확인"
+        echo "  --stop        서비스 중지"
+        echo "  --clean       서비스 완전 삭제"
+        echo "  --help        도움말 표시"
         exit 0
         ;;
     "")

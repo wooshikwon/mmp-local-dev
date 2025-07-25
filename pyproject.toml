@@ -1,0 +1,12 @@
+[project]
+name = "mmp-local-dev"
+version = "0.1.0"
+description = "Integration test suite for the Modern ML Pipeline local development environment."
+requires-python = ">=3.11"
+dependencies = [
+    "psycopg2-binary",
+    "redis",
+    "requests",
+    "feast[postgres]",
+    "pyyaml",
+] 

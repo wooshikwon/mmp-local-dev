@@ -7,12 +7,15 @@ ML Pipeline Local Development Environment Integration Test
 - Redis 연결 및 기본 동작 확인
 - MLflow 서버 연결 확인
 - Feast 피처 조회 테스트
+- dev-contract.yml 계약 준수 검증
 """
 
 import os
 import sys
 import time
 import json
+import socket
+import yaml  # PyYAML 필요
 from datetime import datetime
 from typing import Dict, List, Optional
 
@@ -51,6 +54,69 @@ class IntegrationTest:
         
         self.test_results = {}
         
+    def test_contract_compliance(self) -> bool:
+        """dev-contract.yml 계약 준수 테스트"""
+        log_info("dev-contract.yml 계약 준수 테스트 중...")
+        contract_path = 'dev-contract.yml'
+        
+        try:
+            # 계약 파일 로드
+            with open(contract_path, 'r') as f:
+                contract = yaml.safe_load(f)
+            log_success(f"계약 파일 로드 성공 (버전: {contract.get('version', 'N/A')})")
+            
+            # 1. 환경변수 검증
+            log_info("계약에 명시된 환경변수 검증 중...")
+            missing_vars = []
+            # .env 파일 로드
+            if os.path.exists('.env'):
+                with open('.env', 'r') as f:
+                    for line in f:
+                        if line.strip() and not line.startswith('#') and '=' in line:
+                            key, value = line.strip().split('=', 1)
+                            os.environ.setdefault(key, value)
+
+            for var in contract.get('provides_env_variables', []):
+                if var not in os.environ:
+                    missing_vars.append(var)
+            
+            if not missing_vars:
+                log_success("모든 환경변수가 정상적으로 설정되었습니다.")
+            else:
+                log_error(f"필수 환경변수가 누락되었습니다: {', '.join(missing_vars)}")
+                return False
+            
+            # 2. 서비스 포트 검증
+            log_info("계약에 명시된 서비스 포트 검증 중...")
+            unreachable_services = []
+            for service in contract.get('provides_services', []):
+                name = service.get('name')
+                port = service.get('port')
+                host = 'localhost' # 로컬 테스트 환경이므로 localhost로 가정
+                
+                log_info(f"  - 서비스 '{name}'의 포트 {port} 확인 중...")
+                try:
+                    with socket.create_connection((host, port), timeout=5):
+                        log_success(f"    -> '{name}' 서비스가 포트 {port}에서 응답합니다.")
+                except (socket.timeout, ConnectionRefusedError):
+                    log_error(f"    -> '{name}' 서비스가 포트 {port}에서 응답하지 않습니다.")
+                    unreachable_services.append(f"{name}:{port}")
+
+            if not unreachable_services:
+                log_success("모든 서비스 포트가 정상적으로 열려있습니다.")
+            else:
+                log_error(f"일부 서비스에 연결할 수 없습니다: {', '.join(unreachable_services)}")
+                return False
+            
+            return True
+
+        except FileNotFoundError:
+            log_error(f"계약 파일({contract_path})을 찾을 수 없습니다.")
+            return False
+        except Exception as e:
+            log_error(f"계약 검증 중 오류 발생: {str(e)}")
+            return False
+
     def test_postgresql_connection(self) -> bool:
         """PostgreSQL 연결 테스트"""
         log_info("PostgreSQL 연결 테스트 중...")
@@ -152,27 +218,18 @@ class IntegrationTest:
         try:
             import requests
             
-            # 헬스체크 엔드포인트 테스트
-            health_url = f"{self.mlflow_uri}/health"
-            response = requests.get(health_url, timeout=10)
-            
-            if response.status_code == 200:
-                log_success("MLflow 서버 연결 성공")
-            else:
-                log_error(f"MLflow 서버 응답 오류: {response.status_code}")
-                return False
-            
-            # 실험 목록 조회 테스트
+            # 헬스체크 대신 실제 API 엔드포인트 테스트
             experiments_url = f"{self.mlflow_uri}/api/2.0/mlflow/experiments/list"
             response = requests.get(experiments_url, timeout=10)
             
             if response.status_code == 200:
+                log_success("MLflow 서버 연결 및 API 응답 성공")
                 experiments = response.json()
-                log_success(f"MLflow 실험 목록 조회 성공: {len(experiments.get('experiments', []))}개 실험")
+                log_success(f"  -> {len(experiments.get('experiments', []))}개 실험 발견")
+                return True
             else:
-                log_warning(f"MLflow 실험 목록 조회 실패: {response.status_code}")
-            
-            return True
+                log_error(f"MLflow 서버 API 응답 오류: {response.status_code}")
+                return False
             
         except ImportError:
             log_error("requests 패키지가 설치되지 않았습니다: pip install requests")
@@ -263,6 +320,7 @@ class IntegrationTest:
         print("=" * 80)
         
         tests = [
+            ("계약 준수 (Contract Compliance)", self.test_contract_compliance),
             ("PostgreSQL 연결", self.test_postgresql_connection),
             ("Redis 연결", self.test_redis_connection),
             ("MLflow 서버", self.test_mlflow_connection),
@@ -297,10 +355,10 @@ class IntegrationTest:
         print(f"\n총 {total}개 테스트 중 {passed}개 통과 ({passed/total*100:.1f}%)")
         
         if passed == total:
-            log_success("🎉 모든 테스트 통과! Feature Store 스택이 정상적으로 동작 중입니다.")
+            log_success("🎉 모든 테스트 통과! mmp-local-dev가 계약을 준수하며 정상 동작 중입니다.")
             return True
         else:
-            log_warning(f"⚠️ {total-passed}개 테스트 실패. 일부 기능에 문제가 있을 수 있습니다.")
+            log_warning(f"⚠️ {total-passed}개 테스트 실패. 일부 기능에 문제가 있거나 계약을 위반했을 수 있습니다.")
             return False
 
 def main():

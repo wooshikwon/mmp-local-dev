@@ -115,24 +115,27 @@ start_services() {
     
     # PostgreSQL 대기
     log_info "PostgreSQL 준비 대기 중..."
-    timeout=60
+    timeout=90
     count=0
     while [ $count -lt $timeout ]; do
-        if docker-compose exec -T postgres pg_isready -U mluser -d mlpipeline &>/dev/null; then
-            log_success "PostgreSQL 준비 완료"
+        # pg_isready 대신 실제 쿼리 실행으로 더 안정적인 확인
+        if docker-compose exec -T postgresql psql -U mluser -d mlpipeline -c "SELECT 1" &>/dev/null; then
+            log_success "PostgreSQL 준비 완료 (쿼리 응답 확인)"
             break
         fi
-        sleep 1
-        count=$((count + 1))
+        sleep 2
+        count=$((count + 2))
     done
     
-    if [ $count -eq $timeout ]; then
+    if [ $count -ge $timeout ]; then
         log_error "PostgreSQL 시작 타임아웃"
+        docker-compose logs postgresql
         exit 1
     fi
     
     # Redis 대기
     log_info "Redis 준비 대기 중..."
+    timeout=60
     count=0
     while [ $count -lt $timeout ]; do
         if docker-compose exec -T redis redis-cli ping &>/dev/null; then
@@ -155,7 +158,7 @@ initialize_database() {
     log_step "데이터베이스 초기화 중..."
     
     # Feature Store 스키마 생성
-    docker-compose exec -T postgres psql -U mluser -d mlpipeline << EOF
+    docker-compose exec -T postgresql psql -U mluser -d mlpipeline << EOF
 -- Feature Store 스키마 생성
 CREATE SCHEMA IF NOT EXISTS feature_store;
 
@@ -233,6 +236,26 @@ EOF
     log_success "Redis 피처 데이터 설정 완료"
 }
 
+initialize_feast() {
+    log_step "Feast Feature Store 초기화 중..."
+    
+    # Feast 디렉토리 존재 확인
+    if [ ! -d "feast" ]; then
+        log_warn "Feast 디렉토리가 없어 초기화를 건너뜁니다."
+        return
+    fi
+    
+    # 가상환경 활성화 및 feast apply 실행
+    log_info "Feast 레지스트리 적용 중..."
+    (
+        source .venv/bin/activate && \
+        cd feast && \
+        feast apply
+    )
+    
+    log_success "Feast Feature Store 초기화 완료"
+}
+
 print_usage_guide() {
     echo ""
     echo -e "${GREEN}=================================================================="
@@ -248,7 +271,7 @@ print_usage_guide() {
     
     echo "🔗 연결 테스트:"
     echo "   # PostgreSQL 연결"
-    echo "   docker-compose exec postgres psql -U mluser -d mlpipeline"
+    echo "   docker-compose exec postgresql psql -U mluser -d mlpipeline"
     echo ""
     echo "   # Redis 연결"
     echo "   docker-compose exec redis redis-cli"
@@ -298,6 +321,7 @@ main() {
     start_services
     initialize_database
     setup_redis_features
+    initialize_feast
     print_usage_guide
     
     log_success "모든 설정이 완료되었습니다! 🚀"
@@ -342,4 +366,4 @@ case "${1:-}" in
         echo "도움말: $0 --help"
         exit 1
         ;;
-esac 
+esac

@@ -37,33 +37,27 @@ services:
     restart: unless-stopped
 
   mlflow:
-    image: python:3.11-slim
-    container_name: ml-pipeline-mlflow
+    build:
+      context: ./mlflow
+    restart: always
     ports:
       - "5000:5000"
+    command: >
+      sh -c "mlflow server 
+               --backend-store-uri postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgresql:5432/${POSTGRES_DB}
+               --default-artifact-root /mlflow/artifacts
+               --host 0.0.0.0"
+    volumes:
+      - mlflow_artifacts:/mlflow/artifacts
     depends_on:
       postgresql:
         condition: service_healthy
-    environment:
-      - MLFLOW_BACKEND_STORE_URI=postgresql://${POSTGRES_USER:-mluser}:${POSTGRES_PASSWORD}@postgresql:5432/${POSTGRES_DB:-mlpipeline}
-      - MLFLOW_DEFAULT_ARTIFACT_ROOT=/mlflow/artifacts
-    volumes:
-      - mlflow_artifacts:/mlflow/artifacts
-    command: >
-      sh -c "
-        pip install --no-cache-dir mlflow psycopg2-binary &&
-        mlflow server 
-          --backend-store-uri postgresql://${POSTGRES_USER:-mluser}:${POSTGRES_PASSWORD}@postgresql:5432/${POSTGRES_DB:-mlpipeline}
-          --default-artifact-root /mlflow/artifacts
-          --host 0.0.0.0
-          --port 5000
-      "
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
-      interval: 30s
-      timeout: 10s
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/2.0/mlflow/experiments/list"]
+      interval: 10s
+      timeout: 5s
       retries: 5
-    restart: unless-stopped
+      start_period: 30s
 
   feast-setup:
     image: python:3.11-slim

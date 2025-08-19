@@ -1,0 +1,379 @@
+# mmp-local-dev .gitignore
+# Modern ML Pipeline Local Development Environment
+
+# ==============================================================================
+# Docker & Docker Compose Generated Files
+# ==============================================================================
+
+# Docker volumes and bind mounts
+postgres_data/
+redis_data/
+feast_registry/
+
+# Docker build context
+.dockerignore
+
+# ==============================================================================
+# Environment & Configuration
+# ==============================================================================
+
+# Environment variables (contains sensitive data)
+.env
+.env.local
+.env.development
+.env.production
+
+# Keep example files for reference
+# !.env.example  # This should be tracked
+
+# ==============================================================================
+# MLflow Generated Files
+# ==============================================================================
+
+# MLflow artifacts directory (can be very large)
+mlflow-artifacts/
+mlruns/
+
+# MLflow backend database files
+mlflow.db
+mlflow.sqlite
+
+# ==============================================================================
+# Feast Feature Store Generated Files
+# ==============================================================================
+
+# Feast registry and data
+feast/data/
+feast/.feast/
+feast/registry.db
+feast/registry.sqlite
+feast/feature_repo.yaml.lock
+
+# Feast logs
+feast/logs/
+
+# ==============================================================================
+# Database Files
+# ==============================================================================
+
+# SQLite databases
+*.db
+*.sqlite
+*.sqlite3
+
+# PostgreSQL dumps and backups
+*.sql.backup
+backup_*.sql
+postgres_backup_*.sql
+
+# Database migration files (if using Alembic/similar)
+migrations/versions/*.py
+!migrations/versions/__init__.py
+
+# ==============================================================================
+# Redis Files
+# ==============================================================================
+
+# Redis dumps and backups
+dump.rdb
+*.rdb
+redis_backup_*.rdb
+redis.conf
+
+# ==============================================================================
+# Python Environment & Dependencies
+# ==============================================================================
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# ==============================================================================
+# Logs & Monitoring
+# ==============================================================================
+
+# Application logs
+logs/
+*.log
+*.log.*
+
+# System logs
+syslog
+kern.log
+
+# Docker logs
+docker-compose.override.yml
+
+# ==============================================================================
+# IDE & Editor Files
+# ==============================================================================
+
+# VSCode
+.vscode/
+*.code-workspace
+
+# PyCharm
+.idea/
+*.iws
+*.iml
+*.ipr
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# ==============================================================================
+# Temporary & Cache Files  
+# ==============================================================================
+
+# General temporary files
+tmp/
+temp/
+.tmp/
+.temp/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ==============================================================================
+# Backup Files
+# ==============================================================================
+
+# Full environment backups
+mmp_local_dev_backup_*.tar.gz
+*.backup
+*.bak
+
+# Config backups
+*.conf.backup
+*.yaml.backup
+*.yml.backup
+
+# ==============================================================================
+# Security & Secrets
+# ==============================================================================
+
+# Private keys and certificates
+*.pem
+*.key
+*.crt
+*.cert
+*.p12
+*.pfx
+
+# AWS credentials
+.aws/credentials
+.aws/config
+
+# Google Cloud credentials
+service-account-key.json
+gcp-credentials.json
+
+# Other secret files
+secrets/
+.secrets/
+*.secret
+
+# ==============================================================================
+# Development & Testing
+# ==============================================================================
+
+# Test databases
+test.db
+test.sqlite
+*_test.db
+
+# Test artifacts
+test-results/
+test-reports/
+.coverage-reports/
+
+# Jupyter notebooks checkpoints
+.ipynb_checkpoints/
+
+# ==============================================================================
+# Performance & Profiling
+# ==============================================================================
+
+# Profile data
+*.prof
+*.profile
+
+# Memory dumps
+*.hprof
+*.dump
+
+# ==============================================================================
+# Documentation Build
+# ==============================================================================
+
+# Sphinx documentation
+docs/_build/
+docs/build/
+
+# MkDocs
+site/
+
+# ==============================================================================
+# Monitoring & Metrics
+# ==============================================================================
+
+# Prometheus data
+prometheus/data/
+
+# Grafana data
+grafana/data/
+
+# ==============================================================================
+# CI/CD
+# ==============================================================================
+
+# GitHub Actions artifacts
+.github/workflows/artifacts/
+
+# Local CI scripts
+ci-local/
+.ci-local/
+
+# ==============================================================================
+# Custom Application Data
+# ==============================================================================
+
+# Custom data directories
+data/
+output/
+results/
+
+# Model artifacts (if stored locally)
+models/
+checkpoints/
+
+# Feature engineering artifacts
+features/preprocessed/
+features/engineered/
+
+# ==============================================================================
+# Network & Communication
+# ==============================================================================
+
+# SSL certificates for local development
+ssl/
+certificates/
+
+# ==============================================================================
+# Miscellaneous
+# ==============================================================================
+
+# Lock files that shouldn't be tracked
+poetry.lock
+Pipfile.lock
+# Note: uv.lock should typically be tracked for reproducible builds
+
+# Node.js (if any JS tooling is used)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ==============================================================================
+# Project Specific Exclusions
+# ==============================================================================
+
+# Integration test artifacts
+integration-test-results/
+test-data-temp/
+
+# Local development scripts
+dev-scripts/
+local-setup/
+
+# Personal notes and TODO files
+TODO.local
+NOTES.local
+*.notes
+
+# ==============================================================================
+# Keep Important Files (Explicit Include)
+# ==============================================================================
+
+# These files should be tracked despite patterns above
+!.env.example
+!.gitignore
+!README.md
+!docker-compose.yml
+!dev-contract.yml
+!setup.sh
+!test-integration.py
+!scripts/init-database.sql
+!scripts/seed-features.sql
+!feast/features.py
+!feast/feature_store.yaml
+!mlflow/Dockerfile
+!mlflow/requirements.txt

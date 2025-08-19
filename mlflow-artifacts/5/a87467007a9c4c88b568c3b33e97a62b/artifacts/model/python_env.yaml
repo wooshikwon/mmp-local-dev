@@ -1,7 +1,0 @@
-python: 3.11.10
-build_dependencies:
-- pip
-- setuptools
-- wheel==0.43.0
-dependencies:
-- -r requirements.txt

@@ -1,71 +1,0 @@
-
-c
-C
-user_idì‚¬ìš©ì ê³ ìœ  ì‹ë³„ì"user_idJml_pipeline_local
-îìÄÙ¢¢§š“Äèô×Ã
-f
-F
-
-session_idì„¸ì…˜ ê³ ìœ  ì‹ë³„ì"
-session_idJml_pipeline_local
-îìÄÈä¦¢§š“Ä²ÛÃ
-f
-F
-
-product_idìƒí’ˆ ê³ ìœ  ì‹ë³„ì"
-product_idJml_pipeline_local
-îìÄ˜ë©¢§š“ÄèßŞÃ
-H
-(
-__dummy"
-__dummy_idJml_pipeline_local
-îìÄ°„Ÿ¢§š“ÄâÃ1"$fc6c7c62-5ea6-413c-976c-e128307698d4*§š“Ä€ı™È2Š
-é
-user_demographicsml_pipeline_localuser_id"
-age"
-country_code2€ç„:â
-created_at‚
-‹{"name": "user_demographics_source", "query": "SELECT user_id, age, country_code, created_at FROM features.user_demographics", "table": ""}ŠZfeast.infra.offline_stores.contrib.postgres_offline_store.postgres_source.PostgreSQLSource¢user_demographics_sourceº(ì‚¬ìš©ì ê¸°ë³¸ ì •ë³´ ë°ì´í„° ì†ŒìŠ¤’îìÄğõš"îìÄÀ¿Ò¡@R"ì‚¬ìš©ì ê¸°ë³¸ ì •ë³´ í”¼ì²˜ ë·°b
-user_id
-îìÄ˜½å¡îìÄ˜½å¡2Ö
-µ
-user_purchase_summaryml_pipeline_localuser_id"
-ltv"
-total_purchase_count"
-last_purchase_date2€ÎÚ:Š
-created_at‚²
-¯{"name": "user_purchase_summary_source", "query": "SELECT user_id, ltv, total_purchase_count, last_purchase_date, created_at FROM features.user_purchase_summary", "table": ""}ŠZfeast.infra.offline_stores.contrib.postgres_offline_store.postgres_source.PostgreSQLSource¢user_purchase_summary_sourceº(ì‚¬ìš©ì êµ¬ë§¤ ìš”ì•½ ë°ì´í„° ì†ŒìŠ¤’îìÄ°¨Ÿ"îìÄğšÙ¡@R"ì‚¬ìš©ì êµ¬ë§¤ ìš”ì•½ í”¼ì²˜ ë·°b
-user_id
-îìÄˆÎï¡îìÄˆÎï¡2“
-ò
-product_detailsml_pipeline_local
-product_id"	
-price"
-category"	
-brand2€š:á
-created_at‚’
-{"name": "product_details_source", "query": "SELECT product_id, price, category, brand, created_at FROM features.product_details", "table": ""}ŠZfeast.infra.offline_stores.contrib.postgres_offline_store.postgres_source.PostgreSQLSource¢product_details_sourceº%ìƒí’ˆ ìƒì„¸ ì •ë³´ ë°ì´í„° ì†ŒìŠ¤’îìÄè³£"îìÄÈÅİ¡@Rìƒí’ˆ ìƒì„¸ ì •ë³´ í”¼ì²˜ ë·°b
-
-product_id
-îìÄè–÷¡îìÄè–÷¡2–
-õ
-session_summaryml_pipeline_local
-session_id"
-time_on_page_seconds"
-click_count2€õ$:å
-created_at‚
-š{"name": "session_summary_source", "query": "SELECT session_id, time_on_page_seconds, click_count, created_at FROM features.session_summary", "table": ""}ŠZfeast.infra.offline_stores.contrib.postgres_offline_store.postgres_source.PostgreSQLSource¢session_summary_sourceºì„¸ì…˜ ìš”ì•½ ë°ì´í„° ì†ŒìŠ¤’îìÄĞ¯§"îìÄÈ¹á¡@Rì„¸ì…˜ ìš”ì•½ í”¼ì²˜ ë·°b
-
-session_id
-îìÄ é¢îìÄ é¢bö
-created_at‚
-‹{"name": "user_demographics_source", "query": "SELECT user_id, age, country_code, created_at FROM features.user_demographics", "table": ""}ŠZfeast.infra.offline_stores.contrib.postgres_offline_store.postgres_source.PostgreSQLSource¢user_demographics_sourceªml_pipeline_localº(ì‚¬ìš©ì ê¸°ë³¸ ì •ë³´ ë°ì´í„° ì†ŒìŠ¤’îìÄğõš"îìÄÀ¿Ò¡b
-created_at‚²
-¯{"name": "user_purchase_summary_source", "query": "SELECT user_id, ltv, total_purchase_count, last_purchase_date, created_at FROM features.user_purchase_summary", "table": ""}ŠZfeast.infra.offline_stores.contrib.postgres_offline_store.postgres_source.PostgreSQLSource¢user_purchase_summary_sourceªml_pipeline_localº(ì‚¬ìš©ì êµ¬ë§¤ ìš”ì•½ ë°ì´í„° ì†ŒìŠ¤’îìÄ°¨Ÿ"îìÄğšÙ¡bõ
-created_at‚’
-{"name": "product_details_source", "query": "SELECT product_id, price, category, brand, created_at FROM features.product_details", "table": ""}ŠZfeast.infra.offline_stores.contrib.postgres_offline_store.postgres_source.PostgreSQLSource¢product_details_sourceªml_pipeline_localº%ìƒí’ˆ ìƒì„¸ ì •ë³´ ë°ì´í„° ì†ŒìŠ¤’îìÄè³£"îìÄÈÅİ¡bù
-created_at‚
-š{"name": "session_summary_source", "query": "SELECT session_id, time_on_page_seconds, click_count, created_at FROM features.session_summary", "table": ""}ŠZfeast.infra.offline_stores.contrib.postgres_offline_store.postgres_source.PostgreSQLSource¢session_summary_sourceªml_pipeline_localºì„¸ì…˜ ìš”ì•½ ë°ì´í„° ì†ŒìŠ¤’îìÄĞ¯§"îìÄÈ¹á¡Š3
-
-ml_pipeline_local
-îìÄĞ™Ø§š“ÄØîÎ¾

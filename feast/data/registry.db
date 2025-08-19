@@ -2,24 +2,24 @@
 c
 C
 user_idì‚¬ìš©ì ê³ ìœ  ì‹ë³„ì"user_idJml_pipeline_local
-îìÄÙ¢¢îìÄÙ¢¢
+îìÄÙ¢¢§š“Äèô×Ã
 f
 F
 
 session_idì„¸ì…˜ ê³ ìœ  ì‹ë³„ì"
 session_idJml_pipeline_local
-îìÄÈä¦¢îìÄÈä¦¢
+îìÄÈä¦¢§š“Ä²ÛÃ
 f
 F
 
 product_idìƒí’ˆ ê³ ìœ  ì‹ë³„ì"
 product_idJml_pipeline_local
-îìÄ˜ë©¢îìÄ˜ë©¢
+îìÄ˜ë©¢§š“ÄèßŞÃ
 H
 (
 __dummy"
 __dummy_idJml_pipeline_local
-îìÄ°„Ÿ¢îìÄ¸­¢1"$24b02b29-4262-4d81-a734-ce76d9fb8006*îìÄÊ˜§2Š
+îìÄ°„Ÿ¢§š“ÄâÃ1"$fc6c7c62-5ea6-413c-976c-e128307698d4*§š“Ä€ı™È2Š
 é
 user_demographicsml_pipeline_localuser_id"
 age"
@@ -68,4 +68,4 @@ created_at‚
 š{"name": "session_summary_source", "query": "SELECT session_id, time_on_page_seconds, click_count, created_at FROM features.session_summary", "table": ""}ŠZfeast.infra.offline_stores.contrib.postgres_offline_store.postgres_source.PostgreSQLSource¢session_summary_sourceªml_pipeline_localºì„¸ì…˜ ìš”ì•½ ë°ì´í„° ì†ŒìŠ¤’îìÄĞ¯§"îìÄÈ¹á¡Š3
 
 ml_pipeline_local
-îìÄĞ™ØîìÄĞ™Ø
+îìÄĞ™Ø§š“ÄØîÎ¾

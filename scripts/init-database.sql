@@ -8,6 +8,9 @@ CREATE SCHEMA IF NOT EXISTS features;
 GRANT ALL PRIVILEGES ON SCHEMA features TO mluser;
 GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA features TO mluser;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA features TO mluser;
+-- 
+-- Grant public schema permissions for MLflow
+GRANT ALL PRIVILEGES ON SCHEMA public TO mluser;
 
 -- Create extension for better performance
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";

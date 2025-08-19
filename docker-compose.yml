@@ -41,14 +41,16 @@ services:
       context: ./mlflow
     restart: always
     ports:
-      - "5000:5000"
+      - "5002:5000"  # 포트 변경: 5001 -> 5002 (추가 포트 충돌 해결)
     command: >
-      sh -c "mlflow server 
-               --backend-store-uri postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgresql:5432/${POSTGRES_DB}
-               --default-artifact-root /mlflow/artifacts
-               --host 0.0.0.0"
+      mlflow server 
+      --host 0.0.0.0 
+      --port 5000 
+      --serve-artifacts
+      --default-artifact-root /mlflow/artifacts
+      --backend-store-uri postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgresql:5432/${POSTGRES_DB}
     volumes:
-      - mlflow_artifacts:/mlflow/artifacts
+      - ./mlflow-artifacts:/mlflow/artifacts  # 호스트 디렉토리 바인드 마운트로 변경
     depends_on:
       postgresql:
         condition: service_healthy
@@ -93,8 +95,6 @@ volumes:
   postgres_data:
     driver: local
   redis_data:
-    driver: local
-  mlflow_artifacts:
     driver: local
   feast_registry:
     driver: local

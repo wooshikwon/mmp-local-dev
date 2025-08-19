@@ -1,0 +1,42 @@
+{
+  "phase_1": {
+    "name": "Schema-First \uc124\uacc4",
+    "achievements": [
+      "Entity+Timestamp \ud544\uc218\ud654",
+      "EntitySchema \uad6c\ud604",
+      "Recipe \uad6c\uc870 \ud604\ub300\ud654"
+    ]
+  },
+  "phase_2": {
+    "name": "Point-in-Time \uc548\uc804\uc131",
+    "achievements": [
+      "ASOF JOIN \uac80\uc99d",
+      "Augmenter \ud604\ub300\ud654",
+      "\ubbf8\ub798 \ub370\uc774\ud130 \ub204\ucd9c \ubc29\uc9c0"
+    ]
+  },
+  "phase_3": {
+    "name": "\ubcf4\uc548 \uac15\ud654 Dynamic SQL",
+    "achievements": [
+      "SQL Injection \ubc29\uc9c0",
+      "\ud654\uc774\ud2b8\ub9ac\uc2a4\ud2b8 \uac80\uc99d",
+      "\ubcf4\uc548 \ud15c\ud50c\ub9bf \ud45c\uc900\ud654"
+    ]
+  },
+  "phase_4": {
+    "name": "\uc77c\uad00\uc131 \uc790\ub3d9 \uac80\uc99d",
+    "achievements": [
+      "Schema Drift \uc870\uae30 \ubc1c\uacac",
+      "\ud0c0\uc785 \ud638\ud658\uc131 \uc5d4\uc9c4",
+      "\uc790\ub3d9 \uac80\uc99d \ud1b5\ud569"
+    ]
+  },
+  "phase_5": {
+    "name": "\uc644\uc804 \uc790\uae30 \uae30\uc220 Artifact",
+    "achievements": [
+      "100% \uc7ac\ud604\uc131 \ubcf4\uc7a5",
+      "\uc644\uc804\ud55c \uba54\ud0c0\ub370\uc774\ud130 \ucea1\uc290\ud654",
+      "\uc790\uae30 \uae30\uc220\uc801 \uad6c\uc870"
+    ]
+  }
+}

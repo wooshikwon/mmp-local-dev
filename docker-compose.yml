@@ -37,29 +37,31 @@ services:
     restart: unless-stopped
 
   mlflow:
-    build:
-      context: ./mlflow
-    restart: always
+    image: python:3.11-slim
+    container_name: ml-pipeline-mlflow
     ports:
-      - "5002:5000"  # 포트 변경: 5001 -> 5002 (추가 포트 충돌 해결)
-    command: >
-      mlflow server 
-      --host 0.0.0.0 
-      --port 5000 
-      --serve-artifacts
-      --default-artifact-root /mlflow/artifacts
-      --backend-store-uri postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgresql:5432/${POSTGRES_DB}
-    volumes:
-      - ./mlflow-artifacts:/mlflow/artifacts  # 호스트 디렉토리 바인드 마운트로 변경
+      - "5000:5000"
     depends_on:
       postgresql:
         condition: service_healthy
+    environment:
+      - MLFLOW_BACKEND_STORE_URI=postgresql://${POSTGRES_USER:-mluser}:${POSTGRES_PASSWORD}@postgresql:5432/${POSTGRES_DB:-mlpipeline}
+      - MLFLOW_DEFAULT_ARTIFACT_ROOT=/mlflow/artifacts
+      - MLFLOW_ENABLE_PROXY_MULTIPART_UPLOAD=false
+    volumes:
+      - mlflow_artifacts:/mlflow/artifacts
+    command:
+      - sh
+      - -c
+      - |
+        pip install --no-cache-dir mlflow psycopg2-binary &&
+        mlflow server --backend-store-uri "postgresql://${POSTGRES_USER:-mluser}:${POSTGRES_PASSWORD}@postgresql:5432/${POSTGRES_DB:-mlpipeline}" --default-artifact-root /mlflow/artifacts --host 0.0.0.0 --port 5000 --allowed-hosts "*" --no-serve-artifacts
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/api/2.0/mlflow/experiments/list"]
-      interval: 10s
-      timeout: 5s
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
       retries: 5
-      start_period: 30s
+    restart: unless-stopped
 
   feast-setup:
     image: python:3.11-slim
@@ -95,6 +97,8 @@ volumes:
   postgres_data:
     driver: local
   redis_data:
+    driver: local
+  mlflow_artifacts:
     driver: local
   feast_registry:
     driver: local
